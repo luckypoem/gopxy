@@ -2,10 +2,13 @@ package gopxy
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"github.com/elazarl/goproxy"
 	"github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -78,11 +81,50 @@ func (this *LocalProxy) proxyfunc(req *http.Request, ctx *goproxy.ProxyCtx) (*ht
 	return mreq, rsp
 }
 
+func (this *LocalProxy) loadCaData() (*struct {
+	CaKey  []byte
+	CaCert []byte
+}, error) {
+	rs := &struct {
+		CaKey  []byte
+		CaCert []byte
+	}{}
+	var err error
+	rs.CaKey, err = ioutil.ReadFile(this.cfg.CAData.Key)
+	if err != nil {
+		return nil, err
+	}
+	rs.CaCert, err = ioutil.ReadFile(this.cfg.CAData.Cert)
+	if err != nil {
+		return nil, err
+	}
+	return rs, nil
+}
+
 func (this *LocalProxy) Start() error {
+	//build ca
+	caData, err := this.loadCaData()
+	if err != nil {
+		return fmt.Errorf("load ca data fail, err:%+v", err)
+	}
+	proxyCa, err := tls.X509KeyPair(caData.CaCert, caData.CaKey)
+	if err != nil {
+		return fmt.Errorf("create cert fail, err:%+v", err)
+	}
+	if proxyCa.Leaf, err = x509.ParseCertificate(proxyCa.Certificate[0]); err != nil {
+		return fmt.Errorf("mmm, err:%+v", err)
+	}
+	action := &goproxy.ConnectAction{Action: goproxy.ConnectMitm, TLSConfig: goproxy.TLSConfigFromCA(&proxyCa)}
+	//create proxy...
 	proxy := goproxy.NewProxyHttpServer()
+	//校验证书有效性
+	proxy.Tr = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: false}, Proxy: http.ProxyFromEnvironment}
+
 	proxy.Verbose = true
-	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
+	proxy.OnRequest().HandleConnectFunc(func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
+		return action, host
+	})
 	proxy.OnRequest().DoFunc(this.proxyfunc)
-	err := http.ListenAndServe(this.cfg.BindHost, proxy)
+	err = http.ListenAndServe(this.cfg.BindHost, proxy)
 	return err
 }

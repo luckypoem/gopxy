@@ -24,11 +24,12 @@ func main() {
 		panic(err)
 	}
 
-	logger.Infof("Load config finish:%+v", *cfg)
+	dir, _ := os.Getwd()
+	logger.Infof("Load config finish:%+v, current pwd:%s", *cfg, dir)
 	svr := gopxy.New(cfg, logger)
 	logger.Info("Server start...")
 	err = svr.Start()
 	if err != nil {
-		panic(nil)
+		panic(err)
 	}
 }

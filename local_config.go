@@ -10,6 +10,11 @@ type RemoteConfig struct {
 	Code string `json:"code"`
 }
 
+type CaConfig struct {
+	Key  string `json:"key"`
+	Cert string `json:"cert"`
+}
+
 func (this *RemoteConfig) NewCopy() *RemoteConfig {
 	data := &RemoteConfig{Host: this.Host, Code: this.Code}
 	return data
@@ -19,6 +24,7 @@ type LocalConfig struct {
 	RemoteConfigList []RemoteConfig `json:"remote"`
 	DefaultCode      string         `json:"default_code"`
 	BindHost         string         `json:"bind_host"` //example: 0:0:0:0:8080
+	CAData           CaConfig       `json:"ca_data"`
 }
 
 func Parse(f string) (*LocalConfig, error) {

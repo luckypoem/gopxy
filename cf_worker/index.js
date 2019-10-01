@@ -1,12 +1,31 @@
 /**
  * Main worker entry point.
  */
+
+//refer: https://github.com/pmeenan/cf-workers/blob/master/proxy/proxy.js
+
+/**
+ * @param {any} body
+ * @param {number} status
+ * @param {Object<string, string>} headers
+ */
+function makeRes(body, status = 200, headers = {}) {
+    return new Response(body, {status, headers})
+}
+
 addEventListener("fetch", event => {
-    // Fail-safe in case of an unhandled exception
     console.log(event.request.url);
-    event.passThroughOnException();
-    event.respondWith(processRequest(event.request, event));
+    const rs = processRequest(event.request, event).catch(err => makeRes('cfworker error:\n' + err.stack, 502));
+    event.respondWith(rs);
 });
+
+function filterKey(key) {
+    const lkey = key.toLowerCase();
+    if (lkey.startsWith("cf-") || lkey.startsWith("x-")) {
+        return true
+    }
+    return false
+}
 
 /**
  * Handle all non-proxied requests. Send HTML or CSS on for further processing
@@ -16,34 +35,43 @@ addEventListener("fetch", event => {
  */
 async function processRequest(request, event) {
     // Proxy the request
+    var proxyHeaders = new Headers();
+    var rawHeaders = new Headers();
+    var kvAll = new Headers(request.headers);
+    for(const [k, v] of kvAll.entries()) {
+        if(filterKey(k)) {
+            continue
+        }
+
+        if(k.startsWith('__m_proxy_')) {
+            proxyHeaders.set(k, v)
+        } else {
+            rawHeaders.set(k, v)
+        }
+    }
+    rawHeaders.set('host', proxyHeaders.get('__m_proxy_host'));
+    rawHeaders.set('referer', proxyHeaders.get('__m_proxy_referer'));
+
     let init = {
         method: request.method,
         redirect: "manual",
-        headers: [...request.headers]
+        headers: [...rawHeaders]
     };
-    const url = new URL(request.url);
-    let proxyOrigin = url.origin;
-    const proxyUrl = 'https:/' + url.pathname + url.search;
-    let originalDomain = url.pathname.substr(1);
-    const domainEnd = originalDomain.indexOf('/');
-    if (domainEnd >= 0)
-        originalDomain = originalDomain.substr(0, domainEnd);
-    const response = await fetch(proxyUrl, init);
-    if (response) {
-        // Process test responses
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("text/") !== -1) {
-            let content = await response.text();
-            let init = {
-                method: request.method,
-                headers: [...response.headers]
-            };
-            const newResponse = new Response(content, init);
-            newResponse.headers.set('X-Debug-Path', url.pathname)
-            newResponse.headers.set('X-Debug-Search', url.search)
-            return newResponse;
-        }
+
+    schema = proxyHeaders.get('__m_proxy_schema');
+    if(!schema) {
+        console.log("not found schema? url:" + request.url);
+        schema = 'http'
     }
 
-    return response;
+    const url = new URL(request.url);
+    const proxyUrl = schema + ':/' + url.pathname + url.search;
+    response = await fetch(proxyUrl, init);
+
+    var newRspHeader = new Headers(response.headers);
+    for(const [k, v] of kvAll.entries()) {
+        newRspHeader.set('X-Debug-' + k, v)
+    }
+    response.headers = newRspHeader;
+    return makeRes(response.body, response.status, newRspHeader);
 }

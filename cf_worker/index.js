@@ -4,6 +4,8 @@
 
 //refer: https://github.com/pmeenan/cf-workers/blob/master/proxy/proxy.js
 
+const CHECK_CODE = "USE YOUR CODE HERE, EXP: abcdefg";
+
 /**
  * @param {any} body
  * @param {number} status
@@ -51,6 +53,10 @@ async function processRequest(request, event) {
     }
     rawHeaders.set('host', proxyHeaders.get('__m_proxy_host'));
     rawHeaders.set('referer', proxyHeaders.get('__m_proxy_referer'));
+
+    if(!proxyHeaders.get('__m_proxy_check_code') || proxyHeaders.get('__m_proxy_check_code') != CHECK_CODE) {
+        return makeRes("not found", 404)
+    }
 
     let init = {
         method: request.method,

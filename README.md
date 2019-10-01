@@ -1,10 +1,6 @@
 CF Worker代理
 ===
 
-[TOC]
-
-另一个Goagent
-
 # 如何使用
 ## 编译
 运行目录下的**build.sh**, 之后程序会自动构建并创建binary.tar.gz 包, 可以从里面找到对应平台的可执行文件

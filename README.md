@@ -68,6 +68,19 @@ CF Worker代理
 ```
 启动后能正常输出日志就OK了。。
 
+## 部署(使用Docker)
+cf前端跟上面的手动部署是一样的, 都需要自己手动拷贝index.js到Cloudflare的Worker里面, 
+代理前端的部署可以使用docker目录下的build_docker.sh 进行构建
+
+可以修改脚本中的这2个变量来更新版本或者修改绑定端口
+```shell=
+BUILD_VERSION=v0.0.1
+BIND_PORT=8080
+```
+
+** 其他的配置修改可以通过docker同目录下的config.json来修改, 只能修改remote项, 也就是代理域名列表。 修改其他项可能会导致问题。 **
+
+
 ## 使用 
 1. 自签证书配置
 部署完cf-worker和代理前端后, 还需要导入本地证书, 这个代理前端本质就是一个中间人代理, 劫持你的https请求, 将其转发给worker进行处理。

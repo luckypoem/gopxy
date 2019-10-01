@@ -1,0 +1,14 @@
+{
+  "remark_": "note that, you should only modify remote args...",
+  "remark__": "dont modify any other setting...",
+
+  "remote": [
+    {"host": "your host here", "code": "you code here"}
+  ],
+  "default_code": "xxx",
+  "bind_host": ":8080",
+  "ca_data": {
+    "key": "/etc/gopxy/ca.key.pem",
+    "cert": "/etc/gopxy/ca.pem"
+  }
+}

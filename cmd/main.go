@@ -8,7 +8,7 @@ import (
 )
 
 var cfg = flag.String("config", "./config.json", "config file")
-var loglv = flag.Uint("enable_all_log", 4, "log level")
+var loglv = flag.Uint("log_level", 4, "log level")
 
 func main() {
 	flag.Parse()

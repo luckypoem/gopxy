@@ -23,7 +23,7 @@ addEventListener("fetch", event => {
 
 function filterKey(key) {
     const lkey = key.toLowerCase();
-    if (lkey.startsWith("cf-") || lkey.startsWith("x-")) {
+    if (lkey.startsWith("cf-") || lkey.startsWith("x-real-ip")) {
         return true
     }
     return false
@@ -61,7 +61,7 @@ async function processRequest(request, event) {
     let init = {
         method: request.method,
         redirect: "manual",
-        headers: [...rawHeaders]
+        headers: [...rawHeaders],
     };
 
     schema = proxyHeaders.get('__m_proxy_schema');

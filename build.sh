@@ -12,5 +12,3 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o binary/gopxy_linux cmd/main.go
 tar -czf binary.tar.gz ./binary
 
 echo "binary.tar.gz build succ..."
-
-rm ./binary -rf

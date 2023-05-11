@@ -5,6 +5,7 @@
 //refer: https://github.com/pmeenan/cf-workers/blob/master/proxy/proxy.js
 
 const CHECK_CODE = "USE YOUR CODE HERE, EXP: abcdefg";
+const ip_dns_srv = '.sslip.io' // for both ipv4/6
 
 /**
  * @param {any} body
@@ -27,6 +28,32 @@ function filterKey(key) {
         return true
     }
     return false
+}
+
+/**
+ * Process fetch hostname to bypass IP access restriction on Cloudflare
+ * @param {string} urlstr - example https://host.name/path
+ */
+function correctHost(urlstr) {
+    try { // try to solve: Cloudflare's Direct IP Access Not Allowed
+        const ipv4=/\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/;
+        
+        var url_correct = new URL(urlstr)
+        /* 
+        if(isIPv6(url_correct.hostname) ){
+            // ipv6 TODO
+            url_correct = new URL(
+            urlstr.replace(url_correct.host, 
+            url_correct.host.replaceAll(':','-')
+            .replaceAll('[','').replaceAll(']','') + ip_dns_srv)
+            )
+        }*/
+        if(ipv4.test(url_correct.hostname)){
+            url_correct.hostname = url_correct.hostname + ip_dns_srv //'.sslip.io'
+        }
+        return url_correct.href
+    }
+    catch (err) { return urlstr }
 }
 
 /**
@@ -72,7 +99,7 @@ async function processRequest(request, event) {
 
     const url = new URL(request.url);
     const proxyUrl = schema + ':/' + url.pathname + url.search;
-    response = await fetch(proxyUrl, init);
+    response = await fetch(correctHost(proxyUrl), init);
 
     var newRspHeader = new Headers(response.headers);
     for(const [k, v] of kvAll.entries()) {
